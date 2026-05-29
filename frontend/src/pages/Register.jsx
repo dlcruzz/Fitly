@@ -140,7 +140,7 @@ function Register() {
       style={{ background: '#0D0D0D', fontFamily: 'Inter, system-ui, sans-serif' }}
     >
 
-      {/* ── painel esquerdo ──────────────────────────────────────────────────── */}
+      {/* ── painel esquerdo — oculto em mobile ───────────────────────────────── */}
       <aside
         className="hidden lg:flex flex-col justify-between"
         style={{
@@ -224,10 +224,15 @@ function Register() {
         className="flex flex-col flex-1"
         style={{
           background: '#111111',
-          padding:    '40px 52px 28px',
+          padding:    'clamp(28px, 5vh, 40px) clamp(24px, 6vw, 52px) 28px',
           overflowY:  'auto',
         }}
       >
+        {/* logo visível apenas em mobile */}
+        <div className="flex lg:hidden justify-center mb-8">
+          <Logo />
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '32px' }}>
           <button
             onClick={() => navigate('/login')}
@@ -251,10 +256,23 @@ function Register() {
             letterSpacing: '1.5px',
             textTransform: 'uppercase',
             fontWeight:    600,
-            marginBottom:  '28px',
+            marginBottom:  '20px',
             textAlign:     'center',
           }}>
             Criar conta
+          </p>
+
+          {/* mensagem de privacidade — visível apenas em mobile */}
+          <p className="lg:hidden" style={{
+            color:        '#686868',
+            fontSize:     '0.85rem',
+            lineHeight:   1.65,
+            marginBottom: '24px',
+            textAlign:    'center',
+          }}>
+            Essas são as únicas informações que pedimos. A ideia é que seu treino e
+            sua evolução fiquem com você — acessíveis em qualquer dispositivo, a
+            qualquer momento.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -293,7 +311,6 @@ function Register() {
               )}
             </div>
 
-            {/* senha com toggle de visibilidade e indicador de força */}
             <div>
               <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.82rem', marginBottom: '7px' }}>Senha</label>
 
@@ -425,7 +442,15 @@ function Register() {
             Já tem uma conta?{' '}
             <button
               onClick={() => navigate('/login')}
-              style={{ background: 'none', border: 'none', color: '#F5C518', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: '0.87rem' }}
+              style={{
+                background: 'none',
+                border:     'none',
+                color:      '#F5C518',
+                fontWeight: 600,
+                cursor:     'pointer',
+                padding:    0,
+                fontSize:   '0.87rem',
+              }}
             >
               Entrar
             </button>
@@ -434,7 +459,9 @@ function Register() {
 
         <p style={{ textAlign: 'center', color: '#404040', fontSize: '0.75rem', marginTop: '16px' }}>
           Ao criar sua conta você concorda com nossos{' '}
-          <span style={{ color: '#525252', textDecoration: 'underline', cursor: 'pointer' }}>Termos de Uso</span>
+          <span style={{ color: '#525252', textDecoration: 'underline', cursor: 'pointer' }}>
+            Termos de Uso
+          </span>
         </p>
       </main>
     </div>
