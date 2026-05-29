@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Eye, EyeOff, Check } from 'lucide-react'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -10,6 +10,28 @@ const BENEFICIOS = [
   'Metas semanais e mensais',
 ]
 
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function calcularForcaSenha(senha) {
+  if (!senha) return { nivel: 0, label: '' }
+
+  let pontos = 0
+  if (senha.length >= 8)           pontos++
+  if (/[A-Z]/.test(senha))         pontos++
+  if (/[0-9]/.test(senha))         pontos++
+  if (/[^A-Za-z0-9]/.test(senha))  pontos++
+
+  const labels = ['', 'Fraca', 'Média', 'Boa', 'Forte']
+  return { nivel: pontos, label: labels[pontos] }
+}
+
+function corDaForca(nivel) {
+  if (nivel <= 1)  return '#EF4444'
+  if (nivel === 2) return '#F59E0B'
+  if (nivel === 3) return '#84CC16'
+  return '#F5C518'
+}
+
 // ─── sub-components ───────────────────────────────────────────────────────────
 
 function Logo() {
@@ -18,6 +40,17 @@ function Logo() {
       <span style={{ color: '#F5C518' }}>Fitly</span>
       <span style={{ color: '#444444' }}>.</span>
     </span>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853" />
+      <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05" />
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
+    </svg>
   )
 }
 
@@ -33,8 +66,11 @@ function Register() {
     confirmarSenha: '',
   })
 
-  const [campoAtivo, setCampoAtivo] = useState(null)
-  const [erros, setErros]           = useState({})
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [campoAtivo, setCampoAtivo]     = useState(null)
+  const [erros, setErros]               = useState({})
+
+  const { nivel: nivelSenha, label: labelSenha } = calcularForcaSenha(form.senha)
 
   function handleChange(campo) {
     return (e) => {
@@ -257,18 +293,58 @@ function Register() {
               )}
             </div>
 
+            {/* senha com toggle de visibilidade e indicador de força */}
             <div>
               <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.82rem', marginBottom: '7px' }}>Senha</label>
-              <input
-                type="password"
-                placeholder="Senha"
-                value={form.senha}
-                onChange={handleChange('senha')}
-                onFocus={() => setCampoAtivo('senha')}
-                onBlur={() => setCampoAtivo(null)}
-                style={inputStyle('senha')}
-                autoComplete="new-password"
-              />
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  placeholder="Senha"
+                  value={form.senha}
+                  onChange={handleChange('senha')}
+                  onFocus={() => setCampoAtivo('senha')}
+                  onBlur={() => setCampoAtivo(null)}
+                  style={{ ...inputStyle('senha'), paddingRight: '44px' }}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  style={{
+                    position:   'absolute',
+                    right:      '14px',
+                    top:        '50%',
+                    transform:  'translateY(-50%)',
+                    background: 'none',
+                    border:     'none',
+                    cursor:     'pointer',
+                    color:      '#525252',
+                    display:    'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {mostrarSenha ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
+              {form.senha.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ flex: 1, height: '3px', background: '#2C2C2C', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{
+                      width:        `${(nivelSenha / 4) * 100}%`,
+                      height:       '100%',
+                      background:   corDaForca(nivelSenha),
+                      borderRadius: '4px',
+                      transition:   'width 0.3s, background 0.3s',
+                    }} />
+                  </div>
+                  <span style={{ color: corDaForca(nivelSenha), fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {labelSenha}
+                  </span>
+                </div>
+              )}
+
               {erros.senha && (
                 <p style={{ color: '#EF4444', fontSize: '0.78rem', marginTop: '4px' }}>{erros.senha}</p>
               )}
@@ -340,6 +416,7 @@ function Register() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#404040')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#2C2C2C')}
             >
+              <GoogleIcon />
               Entrar com Google
             </button>
           </form>
