@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
 
@@ -25,6 +26,78 @@ function Logo() {
 function Register() {
   const navigate = useNavigate()
 
+  const [form, setForm] = useState({
+    nome:           '',
+    email:          '',
+    senha:          '',
+    confirmarSenha: '',
+  })
+
+  const [campoAtivo, setCampoAtivo] = useState(null)
+  const [erros, setErros]           = useState({})
+
+  function handleChange(campo) {
+    return (e) => {
+      setForm((prev) => ({ ...prev, [campo]: e.target.value }))
+      if (erros[campo]) setErros((prev) => ({ ...prev, [campo]: null }))
+    }
+  }
+
+  function validar() {
+    const novosErros = {}
+
+    if (!form.nome.trim())
+      novosErros.nome = 'Nome obrigatório'
+
+    if (!form.email.trim())
+      novosErros.email = 'E-mail obrigatório'
+    else if (!/\S+@\S+\.\S+/.test(form.email))
+      novosErros.email = 'E-mail inválido'
+
+    if (!form.senha)
+      novosErros.senha = 'Senha obrigatória'
+    else if (form.senha.length < 6)
+      novosErros.senha = 'Mínimo 6 caracteres'
+
+    if (form.confirmarSenha !== form.senha)
+      novosErros.confirmarSenha = 'Senhas não coincidem'
+
+    return novosErros
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    const novosErros = validar()
+
+    if (Object.keys(novosErros).length > 0) {
+      setErros(novosErros)
+      return
+    }
+
+    // TODO: authService.register() → redirecionar para /onboarding
+    navigate('/onboarding')
+  }
+
+  function inputStyle(campo) {
+    const borderColor =
+      campoAtivo === campo ? '#F5C518' :
+      erros[campo]         ? '#EF4444' :
+                             '#2C2C2C'
+
+    return {
+      width:        '100%',
+      background:   '#0D0D0D',
+      border:       `1.5px solid ${borderColor}`,
+      borderRadius: '10px',
+      padding:      '12px 16px',
+      color:        '#FFFFFF',
+      fontSize:     '0.95rem',
+      outline:      'none',
+      transition:   'border-color 0.2s',
+      boxSizing:    'border-box',
+    }
+  }
+
   return (
     <div
       className="min-h-screen flex"
@@ -41,7 +114,6 @@ function Register() {
           overflow: 'hidden',
         }}
       >
-        {/* gradiente decorativo superior */}
         <div style={{
           position:      'absolute',
           top:           0,
@@ -52,7 +124,6 @@ function Register() {
           pointerEvents: 'none',
         }} />
 
-        {/* gradiente decorativo inferior */}
         <div style={{
           position:      'absolute',
           bottom:        '10%',
@@ -150,15 +221,23 @@ function Register() {
             Criar conta
           </p>
 
-          <form style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
             <div>
               <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.82rem', marginBottom: '7px' }}>Nome completo</label>
               <input
                 type="text"
                 placeholder="Nome completo"
-                style={{ width: '100%', background: '#0D0D0D', border: '1.5px solid #2C2C2C', borderRadius: '10px', padding: '12px 16px', color: '#FFFFFF', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                value={form.nome}
+                onChange={handleChange('nome')}
+                onFocus={() => setCampoAtivo('nome')}
+                onBlur={() => setCampoAtivo(null)}
+                style={inputStyle('nome')}
                 autoComplete="name"
               />
+              {erros.nome && (
+                <p style={{ color: '#EF4444', fontSize: '0.78rem', marginTop: '4px' }}>{erros.nome}</p>
+              )}
             </div>
 
             <div>
@@ -166,9 +245,16 @@ function Register() {
               <input
                 type="email"
                 placeholder="E-mail"
-                style={{ width: '100%', background: '#0D0D0D', border: '1.5px solid #2C2C2C', borderRadius: '10px', padding: '12px 16px', color: '#FFFFFF', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                value={form.email}
+                onChange={handleChange('email')}
+                onFocus={() => setCampoAtivo('email')}
+                onBlur={() => setCampoAtivo(null)}
+                style={inputStyle('email')}
                 autoComplete="email"
               />
+              {erros.email && (
+                <p style={{ color: '#EF4444', fontSize: '0.78rem', marginTop: '4px' }}>{erros.email}</p>
+              )}
             </div>
 
             <div>
@@ -176,9 +262,16 @@ function Register() {
               <input
                 type="password"
                 placeholder="Senha"
-                style={{ width: '100%', background: '#0D0D0D', border: '1.5px solid #2C2C2C', borderRadius: '10px', padding: '12px 16px', color: '#FFFFFF', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                value={form.senha}
+                onChange={handleChange('senha')}
+                onFocus={() => setCampoAtivo('senha')}
+                onBlur={() => setCampoAtivo(null)}
+                style={inputStyle('senha')}
                 autoComplete="new-password"
               />
+              {erros.senha && (
+                <p style={{ color: '#EF4444', fontSize: '0.78rem', marginTop: '4px' }}>{erros.senha}</p>
+              )}
             </div>
 
             <div>
@@ -186,9 +279,16 @@ function Register() {
               <input
                 type="password"
                 placeholder="Confirmar senha"
-                style={{ width: '100%', background: '#0D0D0D', border: '1.5px solid #2C2C2C', borderRadius: '10px', padding: '12px 16px', color: '#FFFFFF', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                value={form.confirmarSenha}
+                onChange={handleChange('confirmarSenha')}
+                onFocus={() => setCampoAtivo('confirmarSenha')}
+                onBlur={() => setCampoAtivo(null)}
+                style={inputStyle('confirmarSenha')}
                 autoComplete="new-password"
               />
+              {erros.confirmarSenha && (
+                <p style={{ color: '#EF4444', fontSize: '0.78rem', marginTop: '4px' }}>{erros.confirmarSenha}</p>
+              )}
             </div>
 
             <button
@@ -205,7 +305,10 @@ function Register() {
                 fontSize:      '0.97rem',
                 cursor:        'pointer',
                 letterSpacing: '0.2px',
+                transition:    'opacity 0.2s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.88')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
             >
               Criar minha conta
             </button>
@@ -232,7 +335,10 @@ function Register() {
                 alignItems:     'center',
                 justifyContent: 'center',
                 gap:            '10px',
+                transition:     'border-color 0.2s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#404040')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#2C2C2C')}
             >
               Entrar com Google
             </button>
