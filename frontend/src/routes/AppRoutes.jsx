@@ -31,15 +31,8 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<Register />} />
 
-      {/* Onboarding — acessado após primeiro login */}
-      <Route
-        path="/onboarding"
-        element={
-          <RotaProtegida>
-            <Onboarding />
-          </RotaProtegida>
-        }
-      />
+      {/* Onboarding — temporariamente público para desenvolvimento */}
+      <Route path="/onboarding" element={<Onboarding />} />
 
       {/* Rotas protegidas da aplicação */}
       <Route
