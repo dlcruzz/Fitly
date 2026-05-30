@@ -34,23 +34,10 @@ function AppRoutes() {
       {/* Onboarding — temporariamente público para desenvolvimento */}
       <Route path="/onboarding" element={<Onboarding />} />
 
-      {/* Rotas protegidas da aplicação */}
-      <Route
-        path="/dashboard"
-        element={
-          <RotaProtegida>
-            <Dashboard />
-          </RotaProtegida>
-        }
-      />
-      <Route
-        path="/treinos"
-        element={
-          <RotaProtegida>
-            <Treinos />
-          </RotaProtegida>
-        }
-      />
+      {/* Dashboard — temporariamente público para desenvolvimento */}
+      <Route path="/dashboard" element={<Dashboard />} />
+      {/* Treinos — temporariamente público para desenvolvimento */}
+      <Route path="/treinos" element={<Treinos />} />
       <Route
         path="/treinos/:id/executar"
         element={
