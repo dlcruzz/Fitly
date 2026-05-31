@@ -40,14 +40,8 @@ function AppRoutes() {
       <Route path="/treinos" element={<Treinos />} />
       {/* Execução — temporariamente público para desenvolvimento */}
       <Route path="/treinos/:id/executar" element={<ExecucaoTreino />} />
-      <Route
-        path="/evolucao"
-        element={
-          <RotaProtegida>
-            <Evolucao />
-          </RotaProtegida>
-        }
-      />
+      {/* Evolução — temporariamente público para desenvolvimento */}
+      <Route path="/evolucao" element={<Evolucao />} />
       <Route
         path="/metas"
         element={
