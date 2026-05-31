@@ -1,38 +1,56 @@
 import api from './api'
 
-// Realiza login e armazena o token JWT no localStorage
+const TOKEN_KEY = 'fitly_token'
+const USUARIO_KEY = 'fitly_usuario'
+
 export async function login(email, senha) {
-  // TODO: implementar chamada POST /auth/login
-  // TODO: armazenar token retornado com localStorage.setItem('fitly_token', token)
-  // TODO: retornar dados do usuário
+  const { data } = await api.post('/auth/login', { email, senha })
+  localStorage.setItem(TOKEN_KEY, data.token)
+  if (data.usuario) {
+    localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
+  }
+  return data
 }
 
-// Realiza o cadastro de um novo usuário
 export async function register(dadosUsuario) {
-  // TODO: implementar chamada POST /auth/register
-  // TODO: fazer login automático após cadastro bem-sucedido
+  const { data } = await api.post('/auth/register', dadosUsuario)
+  localStorage.setItem(TOKEN_KEY, data.token)
+  if (data.usuario) {
+    localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
+  }
+  return data
 }
 
-// Remove o token e dados do usuário da sessão
 export function logout() {
-  // TODO: remover token do localStorage
-  // TODO: limpar contexto de autenticação
-  // TODO: redirecionar para /login
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USUARIO_KEY)
 }
 
-// Renova o token JWT usando o refresh token
 export async function refreshToken() {
-  // TODO: implementar chamada POST /auth/refresh
-  // TODO: atualizar token no localStorage com o novo token retornado
+  const { data } = await api.post('/auth/refresh')
+  localStorage.setItem(TOKEN_KEY, data.token)
+  return data
 }
 
-// Verifica se o usuário está autenticado
 export function estaAutenticado() {
-  // TODO: verificar existência e validade do token no localStorage
-  return false
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
 }
 
-// Retorna o token atual do localStorage
 export function obterToken() {
-  return localStorage.getItem('fitly_token')
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function obterUsuario() {
+  try {
+    return JSON.parse(localStorage.getItem(USUARIO_KEY) ?? 'null')
+  } catch {
+    return null
+  }
 }

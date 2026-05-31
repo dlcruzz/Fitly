@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { estaAutenticado } from '../services/authService'
 
 import LandingPage from '../pages/LandingPage'
 import Login from '../pages/Login'
@@ -11,43 +12,36 @@ import Evolucao from '../pages/Evolucao'
 import Metas from '../pages/Metas'
 import Perfil from '../pages/Perfil'
 
-// TODO: substituir por verificação real de autenticação via contexto
-const usuarioAutenticado = false
-
+// Rota privada — redireciona para /login se não autenticado
 function RotaProtegida({ children }) {
-  if (!usuarioAutenticado) {
-    return <Navigate to="/login" replace />
-  }
-  return children
+  return estaAutenticado() ? children : <Navigate to="/login" replace />
+}
+
+// Rota pública — redireciona para /dashboard se já autenticado
+function RotaPublica({ children }) {
+  return estaAutenticado() ? <Navigate to="/dashboard" replace /> : children
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Rota pública — landing page */}
+      {/* Landing page — sempre acessível */}
       <Route path="/" element={<LandingPage />} />
 
-      {/* Rotas de autenticação */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/cadastro" element={<Register />} />
+      {/* Autenticação — redireciona para dashboard se já logado */}
+      <Route path="/login" element={<RotaPublica><Login /></RotaPublica>} />
+      <Route path="/cadastro" element={<RotaPublica><Register /></RotaPublica>} />
 
-      {/* Onboarding — temporariamente público para desenvolvimento */}
-      <Route path="/onboarding" element={<Onboarding />} />
+      {/* Onboarding e área interna — exigem autenticação */}
+      <Route path="/onboarding" element={<RotaProtegida><Onboarding /></RotaProtegida>} />
+      <Route path="/dashboard" element={<RotaProtegida><Dashboard /></RotaProtegida>} />
+      <Route path="/treinos" element={<RotaProtegida><Treinos /></RotaProtegida>} />
+      <Route path="/treinos/:id/executar" element={<RotaProtegida><ExecucaoTreino /></RotaProtegida>} />
+      <Route path="/evolucao" element={<RotaProtegida><Evolucao /></RotaProtegida>} />
+      <Route path="/metas" element={<RotaProtegida><Metas /></RotaProtegida>} />
+      <Route path="/perfil" element={<RotaProtegida><Perfil /></RotaProtegida>} />
 
-      {/* Dashboard — temporariamente público para desenvolvimento */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      {/* Treinos — temporariamente público para desenvolvimento */}
-      <Route path="/treinos" element={<Treinos />} />
-      {/* Execução — temporariamente público para desenvolvimento */}
-      <Route path="/treinos/:id/executar" element={<ExecucaoTreino />} />
-      {/* Evolução — temporariamente público para desenvolvimento */}
-      <Route path="/evolucao" element={<Evolucao />} />
-      {/* Metas — temporariamente público para desenvolvimento */}
-      <Route path="/metas" element={<Metas />} />
-      {/* Perfil — temporariamente público para desenvolvimento */}
-      <Route path="/perfil" element={<Perfil />} />
-
-      {/* Rota fallback — redireciona para home */}
+      {/* Rota não encontrada — volta para home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
