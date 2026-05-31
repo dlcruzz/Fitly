@@ -44,14 +44,8 @@ function AppRoutes() {
       <Route path="/evolucao" element={<Evolucao />} />
       {/* Metas — temporariamente público para desenvolvimento */}
       <Route path="/metas" element={<Metas />} />
-      <Route
-        path="/perfil"
-        element={
-          <RotaProtegida>
-            <Perfil />
-          </RotaProtegida>
-        }
-      />
+      {/* Perfil — temporariamente público para desenvolvimento */}
+      <Route path="/perfil" element={<Perfil />} />
 
       {/* Rota fallback — redireciona para home */}
       <Route path="*" element={<Navigate to="/" replace />} />
