@@ -14,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+// Roda uma vez por requisição — intercepta todas as chamadas para verificar o token JWT
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
@@ -27,17 +28,26 @@ public class JwtFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        // TODO: extrair header Authorization da requisição
-        // TODO: verificar se o header começa com "Bearer "
-        // TODO: extrair o token removendo o prefixo "Bearer "
-        // TODO: validar o token via jwtUtil.validarToken(token)
-        // TODO: extrair e-mail do token via jwtUtil.extrairEmail(token)
-        // TODO: carregar UserDetails via userDetailsService.loadUserByUsername(email)
-        // TODO: criar UsernamePasswordAuthenticationToken com os UserDetails
-        // TODO: setar detalhes da requisição no token de autenticação
-        // TODO: setar autenticação no SecurityContextHolder
-        // TODO: chamar filterChain.doFilter(request, response) sempre ao final
+        // Busca o header Authorization — formato esperado: "Bearer eyJhbGci..."
+        String authHeader = request.getHeader("Authorization");
 
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            // Remove o prefixo "Bearer " para ficar só com o token
+            String token = authHeader.substring(7);
+
+            if (jwtUtil.validarToken(token)) {
+                String email = jwtUtil.extrairEmail(token);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+                // Cria o objeto de autenticação e registra no contexto de segurança do Spring
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+        }
+
+        // Sempre continua a cadeia de filtros — seja com ou sem token válido
         filterChain.doFilter(request, response);
     }
 }

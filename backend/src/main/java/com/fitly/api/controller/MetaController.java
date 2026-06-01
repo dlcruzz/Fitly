@@ -19,50 +19,39 @@ public class MetaController {
 
     private final MetaService metaService;
 
-    // GET /metas — listar todas as metas do usuário
     @GetMapping
     public ResponseEntity<List<MetaDTO>> listar(@AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: extrair ID do usuário do contexto de segurança
-        // TODO: delegar para metaService.listarMetas(idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(metaService.listarMetas(userDetails.getUsername()));
     }
 
-    // POST /metas — criar nova meta
     @PostMapping
     public ResponseEntity<MetaDTO> criar(
             @Valid @RequestBody MetaDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para metaService.criar(dto, idUsuario)
-        // TODO: retornar 201 CREATED
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(metaService.criar(dto, userDetails.getUsername()));
     }
 
-    // PUT /metas/{id} — atualizar meta existente
     @PutMapping("/{id}")
     public ResponseEntity<MetaDTO> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody MetaDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para metaService.atualizar(id, dto, idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(metaService.atualizar(id, dto, userDetails.getUsername()));
     }
 
-    // DELETE /metas/{id} — remover meta
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para metaService.excluir(id, idUsuario)
-        // TODO: retornar 204 NO CONTENT
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        metaService.excluir(id, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
     }
 
-    // GET /metas/{id}/progresso — consultar progresso de uma meta específica
     @GetMapping("/{id}/progresso")
     public ResponseEntity<MetaDTO> progresso(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para metaService.getProgresso(id, idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(metaService.getProgresso(id, userDetails.getUsername()));
     }
 }

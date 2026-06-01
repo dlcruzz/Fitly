@@ -19,50 +19,39 @@ public class TreinoController {
 
     private final TreinoService treinoService;
 
-    // GET /treinos — listar todos os treinos do usuário autenticado
     @GetMapping
     public ResponseEntity<List<TreinoDTO>> listar(@AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: extrair ID do usuário do contexto de segurança
-        // TODO: delegar para treinoService.listarTreinos(idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(treinoService.listarTreinos(userDetails.getUsername()));
     }
 
-    // GET /treinos/{id} — buscar treino específico por ID
     @GetMapping("/{id}")
     public ResponseEntity<TreinoDTO> buscarPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para treinoService.buscarPorId(id, idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(treinoService.buscarPorId(id, userDetails.getUsername()));
     }
 
-    // POST /treinos — criar novo treino
     @PostMapping
     public ResponseEntity<TreinoDTO> criar(
             @Valid @RequestBody TreinoDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para treinoService.criar(dto, idUsuario)
-        // TODO: retornar 201 CREATED
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(treinoService.criar(dto, userDetails.getUsername()));
     }
 
-    // PUT /treinos/{id} — atualizar treino existente
     @PutMapping("/{id}")
     public ResponseEntity<TreinoDTO> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody TreinoDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para treinoService.atualizar(id, dto, idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(treinoService.atualizar(id, dto, userDetails.getUsername()));
     }
 
-    // DELETE /treinos/{id} — remover treino (soft delete)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para treinoService.excluir(id, idUsuario)
-        // TODO: retornar 204 NO CONTENT
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        treinoService.excluir(id, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
     }
 }

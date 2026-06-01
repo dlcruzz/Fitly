@@ -2,10 +2,14 @@ package com.fitly.api.service;
 
 import com.fitly.api.dto.MetaDTO;
 import com.fitly.api.model.Meta;
+import com.fitly.api.model.Usuario;
 import com.fitly.api.repository.MetaRepository;
+import com.fitly.api.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -13,40 +17,94 @@ import java.util.List;
 public class MetaService {
 
     private final MetaRepository metaRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public List<MetaDTO> listarMetas(Long idUsuario) {
-        // TODO: buscar metas do usuário ordenadas por data de criação
-        // TODO: calcular percentualConcluido para cada meta
-        // TODO: separar metas ativas das concluídas
-        // TODO: retornar lista de DTOs
-        throw new UnsupportedOperationException("Método listarMetas ainda não implementado");
+    @Transactional(readOnly = true)
+    public List<MetaDTO> listarMetas(String email) {
+        Usuario usuario = getUsuario(email);
+        return metaRepository.findByUsuarioIdOrderByDataCriacaoDesc(usuario.getId())
+                .stream()
+                .map(this::toDTO)
+                .toList();
     }
 
-    public MetaDTO criar(MetaDTO dto, Long idUsuario) {
-        // TODO: buscar usuário pelo ID
-        // TODO: criar entidade Meta a partir do DTO
-        // TODO: salvar e retornar DTO com percentualConcluido = 0
-        throw new UnsupportedOperationException("Método criar ainda não implementado");
+    @Transactional
+    public MetaDTO criar(MetaDTO dto, String email) {
+        Usuario usuario = getUsuario(email);
+
+        Meta meta = Meta.builder()
+                .usuario(usuario)
+                .titulo(dto.getTitulo())
+                .descricao(dto.getDescricao())
+                .tipo(dto.getTipo())
+                .valorAlvo(dto.getValorAlvo())
+                .dataLimite(dto.getDataLimite())
+                .build();
+
+        return toDTO(metaRepository.save(meta));
     }
 
-    public MetaDTO atualizar(Long idMeta, MetaDTO dto, Long idUsuario) {
-        // TODO: verificar se meta pertence ao usuário
-        // TODO: atualizar campos (titulo, descricao, valorAlvo, dataLimite)
-        // TODO: recalcular percentualConcluido
-        // TODO: se percentualConcluido >= 100 → setar status CONCLUIDA e dataConclusao
-        throw new UnsupportedOperationException("Método atualizar ainda não implementado");
+    @Transactional
+    public MetaDTO atualizar(Long idMeta, MetaDTO dto, String email) {
+        Usuario usuario = getUsuario(email);
+        Meta meta = metaRepository.findByIdAndUsuarioId(idMeta, usuario.getId())
+                .orElseThrow(() -> new RuntimeException("Meta não encontrada"));
+
+        if (dto.getTitulo() != null) meta.setTitulo(dto.getTitulo());
+        if (dto.getDescricao() != null) meta.setDescricao(dto.getDescricao());
+        if (dto.getValorAlvo() != null) meta.setValorAlvo(dto.getValorAlvo());
+        if (dto.getDataLimite() != null) meta.setDataLimite(dto.getDataLimite());
+
+        if (dto.getValorAtual() != null) {
+            meta.setValorAtual(dto.getValorAtual());
+            // Conclui automaticamente ao atingir 100% do valor alvo
+            if (dto.getValorAtual() >= meta.getValorAlvo()) {
+                meta.setStatus("CONCLUIDA");
+                meta.setDataConclusao(LocalDateTime.now());
+            }
+        }
+
+        return toDTO(metaRepository.save(meta));
     }
 
-    public void excluir(Long idMeta, Long idUsuario) {
-        // TODO: verificar se meta pertence ao usuário
-        // TODO: excluir meta do banco
-        throw new UnsupportedOperationException("Método excluir ainda não implementado");
+    @Transactional
+    public void excluir(Long idMeta, String email) {
+        Usuario usuario = getUsuario(email);
+        Meta meta = metaRepository.findByIdAndUsuarioId(idMeta, usuario.getId())
+                .orElseThrow(() -> new RuntimeException("Meta não encontrada"));
+        metaRepository.delete(meta);
     }
 
-    public MetaDTO getProgresso(Long idMeta, Long idUsuario) {
-        // TODO: buscar meta pelo ID e usuário
-        // TODO: calcular progresso atual baseado no tipo de meta
-        // TODO: retornar DTO com valorAtual, valorAlvo e percentualConcluido
-        throw new UnsupportedOperationException("Método getProgresso ainda não implementado");
+    @Transactional(readOnly = true)
+    public MetaDTO getProgresso(Long idMeta, String email) {
+        Usuario usuario = getUsuario(email);
+        return metaRepository.findByIdAndUsuarioId(idMeta, usuario.getId())
+                .map(this::toDTO)
+                .orElseThrow(() -> new RuntimeException("Meta não encontrada"));
+    }
+
+    private Usuario getUsuario(String email) {
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    }
+
+    private MetaDTO toDTO(Meta meta) {
+        double percentual = meta.getValorAtual() != null && meta.getValorAlvo() > 0
+                ? Math.min((meta.getValorAtual() / meta.getValorAlvo()) * 100, 100.0)
+                : 0.0;
+
+        return MetaDTO.builder()
+                .id(meta.getId())
+                .titulo(meta.getTitulo())
+                .descricao(meta.getDescricao())
+                .tipo(meta.getTipo())
+                .valorAlvo(meta.getValorAlvo())
+                .valorAtual(meta.getValorAtual())
+                .dataLimite(meta.getDataLimite())
+                .dataCriacao(meta.getDataCriacao())
+                .dataConclusao(meta.getDataConclusao())
+                .status(meta.getStatus())
+                .percentualConcluido(percentual)
+                .build();
     }
 }

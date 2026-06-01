@@ -17,39 +17,31 @@ public class ExercicioController {
 
     private final ExercicioService exercicioService;
 
-    // GET /exercicios — listar exercícios com filtros opcionais
     @GetMapping
     public ResponseEntity<List<ExercicioDTO>> listar(
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) String grupoMuscular) {
-        // TODO: delegar para exercicioService.listarExercicios(nome, grupoMuscular)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(exercicioService.listarExercicios(nome, grupoMuscular));
     }
 
-    // POST /exercicios — criar exercício associado a um treino
     @PostMapping
     public ResponseEntity<ExercicioDTO> criar(
             @Valid @RequestBody ExercicioDTO dto,
             @RequestParam Long idTreino) {
-        // TODO: delegar para exercicioService.criar(dto, idTreino)
-        // TODO: retornar 201 CREATED
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(exercicioService.criar(dto, idTreino));
     }
 
-    // PUT /exercicios/{id} — atualizar exercício existente
     @PutMapping("/{id}")
     public ResponseEntity<ExercicioDTO> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody ExercicioDTO dto) {
-        // TODO: delegar para exercicioService.atualizar(id, dto)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(exercicioService.atualizar(id, dto));
     }
 
-    // DELETE /exercicios/{id} — remover exercício
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        // TODO: delegar para exercicioService.excluir(id)
-        // TODO: retornar 204 NO CONTENT
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        exercicioService.excluir(id);
+        return ResponseEntity.noContent().build();
     }
 }

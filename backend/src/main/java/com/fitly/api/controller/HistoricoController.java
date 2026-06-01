@@ -1,9 +1,13 @@
 package com.fitly.api.controller;
 
+import com.fitly.api.dto.HistoricoTreinoDTO;
+import com.fitly.api.dto.SessaoRequestDTO;
 import com.fitly.api.service.HistoricoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,42 +24,35 @@ public class HistoricoController {
 
     private final HistoricoService historicoService;
 
-    // GET /historico — listar histórico de sessões do usuário (paginado)
     @GetMapping
-    public ResponseEntity<Page<?>> listar(
+    public ResponseEntity<Page<HistoricoTreinoDTO>> listar(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "10") int tamanhoPagina) {
-        // TODO: extrair ID do usuário do contexto de segurança
-        // TODO: delegar para historicoService.listarHistorico(idUsuario, pageable)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        PageRequest pageRequest = PageRequest.of(pagina, tamanhoPagina, Sort.by("dataInicio").descending());
+        return ResponseEntity.ok(historicoService.listarHistorico(userDetails.getUsername(), pageRequest));
     }
 
-    // POST /historico — registrar sessão de treino concluída
     @PostMapping
-    public ResponseEntity<?> registrar(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody Object dadosSessao) {
-        // TODO: delegar para historicoService.registrarSessao(idUsuario, dadosSessao)
-        // TODO: retornar 201 CREATED com o histórico salvo
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<HistoricoTreinoDTO> registrar(
+            @Valid @RequestBody SessaoRequestDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(historicoService.registrarSessao(userDetails.getUsername(), dto));
     }
 
-    // GET /historico/evolucao — evolução de carga de um exercício no tempo
     @GetMapping("/evolucao")
     public ResponseEntity<List<Map<String, Object>>> evolucao(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam Long exercicioId,
-            @RequestParam(defaultValue = "30d") String periodo) {
-        // TODO: delegar para historicoService.getEvolucaoCarga(idUsuario, exercicioId, periodo)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+            @RequestParam(defaultValue = "30D") String periodo) {
+        return ResponseEntity.ok(
+                historicoService.getEvolucaoCarga(userDetails.getUsername(), exercicioId, periodo));
     }
 
-    // GET /historico/resumo-semana — resumo de treinos da semana atual
     @GetMapping("/resumo-semana")
     public ResponseEntity<Map<String, Object>> resumoSemana(
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: delegar para historicoService.getResumoSemana(idUsuario)
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(historicoService.getResumoSemana(userDetails.getUsername()));
     }
 }

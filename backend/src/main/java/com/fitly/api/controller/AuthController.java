@@ -17,27 +17,18 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // POST /auth/login — autenticar usuário e retornar token JWT
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        // TODO: delegar para authService.login(request)
-        // TODO: retornar 200 OK com o token no corpo da resposta
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(authService.login(request));
     }
 
-    // POST /auth/register — cadastrar novo usuário
     @PostMapping("/register")
     public ResponseEntity<LoginResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
-        // TODO: delegar para authService.register(request)
-        // TODO: retornar 201 CREATED com o token no corpo da resposta
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
-    // POST /auth/refresh — renovar token JWT usando o refresh token
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponseDTO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken) {
-        // TODO: delegar para authService.refreshToken(refreshToken)
-        // TODO: retornar 200 OK com o novo token
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(authService.refreshToken(refreshToken));
     }
 }

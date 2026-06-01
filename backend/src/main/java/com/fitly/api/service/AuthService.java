@@ -23,27 +23,58 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public LoginResponseDTO login(LoginRequestDTO request) {
-        // TODO: autenticar usuário via authenticationManager
-        // TODO: gerar token JWT via jwtUtil.gerarToken()
-        // TODO: gerar refresh token
-        // TODO: retornar LoginResponseDTO com token, nome e email do usuário
-        throw new UnsupportedOperationException("Método login ainda não implementado");
+        // Delega a verificação de email+senha pro Spring Security
+        Authentication auth = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha()));
+
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        return buildResponse(usuario);
     }
 
     public LoginResponseDTO register(RegisterRequestDTO request) {
-        // TODO: verificar se e-mail já está cadastrado
-        // TODO: validar se senhas coincidem
-        // TODO: criar novo Usuario com senha criptografada
-        // TODO: salvar usuário no banco
-        // TODO: fazer login automático e retornar token
-        throw new UnsupportedOperationException("Método register ainda não implementado");
+        if (usuarioRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("E-mail já cadastrado");
+        }
+
+        if (!request.getSenha().equals(request.getConfirmacaoSenha())) {
+            throw new RuntimeException("As senhas não coincidem");
+        }
+
+        // Salva o usuário com a senha criptografada — NUNCA salvar senha em texto puro
+        Usuario usuario = Usuario.builder()
+                .nome(request.getNome())
+                .email(request.getEmail())
+                .senha(passwordEncoder.encode(request.getSenha()))
+                .build();
+
+        usuarioRepository.save(usuario);
+        return buildResponse(usuario);
     }
 
     public LoginResponseDTO refreshToken(String refreshToken) {
-        // TODO: validar refresh token via jwtUtil.validarToken()
-        // TODO: extrair e-mail do token
-        // TODO: gerar novo token de acesso
-        // TODO: retornar novo LoginResponseDTO
-        throw new UnsupportedOperationException("Método refreshToken ainda não implementado");
+        if (!jwtUtil.validarToken(refreshToken)) {
+            throw new RuntimeException("Refresh token inválido ou expirado");
+        }
+
+        String email = jwtUtil.extrairEmail(refreshToken);
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        return buildResponse(usuario);
+    }
+
+    // Centraliza a montagem do response para evitar repetição em login, register e refresh
+    private LoginResponseDTO buildResponse(Usuario usuario) {
+        return LoginResponseDTO.builder()
+                .token(jwtUtil.gerarToken(usuario.getEmail()))
+                .refreshToken(jwtUtil.gerarRefreshToken(usuario.getEmail()))
+                .tipo("Bearer")
+                .idUsuario(usuario.getId())
+                .nome(usuario.getNome())
+                .email(usuario.getEmail())
+                .expiracaoMs(86400000L)
+                .build();
     }
 }

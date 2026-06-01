@@ -15,15 +15,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
 
+    // Chamado pelo Spring Security sempre que precisa autenticar alguém pelo email
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // TODO: buscar usuário pelo email via usuarioRepository.findByEmail(email)
-        // TODO: lançar UsernameNotFoundException se não encontrado
-        // TODO: retornar User.builder()
-        //         .username(usuario.getEmail())
-        //         .password(usuario.getSenha())
-        //         .roles("USER")
-        //         .build()
-        throw new UsernameNotFoundException("Implementação pendente — usuário: " + email);
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
+
+        // Retorna um UserDetails padrão do Spring com email, senha hash e role
+        return User.builder()
+                .username(usuario.getEmail())
+                .password(usuario.getSenha())
+                .roles("USER")
+                .build();
     }
 }
