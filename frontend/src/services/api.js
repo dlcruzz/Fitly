@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Instância base do Axios apontando para o backend Spring Boot
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'https://fitly-coqs.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
