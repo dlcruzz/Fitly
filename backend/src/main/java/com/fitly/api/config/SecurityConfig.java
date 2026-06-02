@@ -5,8 +5,10 @@ import com.fitly.api.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -31,8 +33,13 @@ public class SecurityConfig {
             // Desabilitar CSRF — API stateless com JWT não precisa de proteção CSRF
             .csrf(AbstractHttpConfigurer::disable)
 
+            // Habilitar CORS usando o CorsFilter bean definido em CorsConfig
+            .cors(Customizer.withDefaults())
+
             // Configuração de autorização de rotas
             .authorizeHttpRequests(auth -> auth
+                // Preflight CORS — OPTIONS deve ser liberado antes de qualquer autenticação
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Rotas públicas — não requerem autenticação
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
                 // Todas as demais rotas requerem autenticação
