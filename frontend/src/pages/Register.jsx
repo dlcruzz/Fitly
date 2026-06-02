@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Check } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function GoogleIcon() {
 
 function Register() {
   const navigate = useNavigate()
+  const { register } = useAuth()
 
   const [form, setForm] = useState({
     nome:           '',
@@ -69,6 +71,8 @@ function Register() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [campoAtivo, setCampoAtivo]     = useState(null)
   const [erros, setErros]               = useState({})
+  const [carregando, setCarregando]     = useState(false)
+  const [erroApi, setErroApi]           = useState('')
 
   const { nivel: nivelSenha, label: labelSenha } = calcularForcaSenha(form.senha)
 
@@ -101,8 +105,9 @@ function Register() {
     return novosErros
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
+    setErroApi('')
     const novosErros = validar()
 
     if (Object.keys(novosErros).length > 0) {
@@ -110,8 +115,16 @@ function Register() {
       return
     }
 
-    // TODO: authService.register() → redirecionar para /onboarding
-    navigate('/onboarding')
+    setCarregando(true)
+    try {
+      await register({ nome: form.nome, email: form.email, senha: form.senha, confirmacaoSenha: form.confirmarSenha })
+      navigate('/onboarding')
+    } catch (err) {
+      const msg = err.response?.data?.message ?? 'Erro ao criar conta. Tente novamente.'
+      setErroApi(msg)
+    } finally {
+      setCarregando(false)
+    }
   }
 
   function inputStyle(campo) {
@@ -384,8 +397,13 @@ function Register() {
               )}
             </div>
 
+            {erroApi && (
+              <p style={{ color: '#EF4444', fontSize: '0.82rem', textAlign: 'center', marginBottom: '4px' }}>{erroApi}</p>
+            )}
+
             <button
               type="submit"
+              disabled={carregando}
               style={{
                 width:         '100%',
                 padding:       '13px',
@@ -396,14 +414,15 @@ function Register() {
                 borderRadius:  '10px',
                 fontWeight:    700,
                 fontSize:      '0.97rem',
-                cursor:        'pointer',
+                cursor:        carregando ? 'not-allowed' : 'pointer',
                 letterSpacing: '0.2px',
+                opacity:       carregando ? 0.6 : 1,
                 transition:    'opacity 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.88')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseEnter={(e) => { if (!carregando) e.currentTarget.style.opacity = '0.88' }}
+              onMouseLeave={(e) => { if (!carregando) e.currentTarget.style.opacity = '1' }}
             >
-              Criar minha conta
+              {carregando ? 'Criando conta...' : 'Criar minha conta'}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
