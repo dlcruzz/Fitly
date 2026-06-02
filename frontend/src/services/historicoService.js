@@ -1,26 +1,26 @@
 import api from './api'
 
-// Busca o histórico de sessões de treino do usuário
-export async function getHistorico(pagina = 0, tamanhoPagina = 10) {
-  // TODO: implementar GET /historico com paginação
-  // TODO: retornar lista de sessões com data, duração e treino realizado
+export async function iniciarSessao(treinoId) {
+  const { data } = await api.post('/historico/iniciar', { treinoId })
+  return data
 }
 
-// Registra uma sessão de treino concluída
-export async function registrarSessao(dadosSessao) {
-  // TODO: implementar POST /historico
-  // TODO: enviar treinoId, dataInicio, dataFim, seriesRealizadas[]
-  // TODO: cada série deve conter exercicioId, series, repeticoes, cargaKg
+export async function finalizarSessao(historicoId) {
+  const { data } = await api.post(`/historico/finalizar/${historicoId}`)
+  return data
 }
 
-// Busca a evolução de carga de um exercício específico
-export async function getEvolucaoCarga(exercicioId, periodo = '30d') {
-  // TODO: implementar GET /historico/evolucao?exercicioId=X&periodo=Y
-  // TODO: retornar array de { data, cargaMaxima, volumeTotal } para alimentar os gráficos
+export async function registrarCarga(dadosCarga) {
+  const { data } = await api.post('/historico/carga', dadosCarga)
+  return data
 }
 
-// Busca o resumo de treinos da semana atual
-export async function getResumoSemana() {
-  // TODO: implementar GET /historico/resumo-semana
-  // TODO: retornar contagem de treinos, volume total e frequência semanal
+export async function getHistoricoUsuario() {
+  const { data } = await api.get('/historico/usuario')
+  return data
+}
+
+export async function getEvolucaoCarga(exercicioId) {
+  const { data } = await api.get(`/historico/evolucao/${exercicioId}`)
+  return data
 }

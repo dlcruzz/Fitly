@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,63 +9,20 @@ import {
   Trophy,
   X,
 } from 'lucide-react'
+import { getTreinoById } from '../services/treinoService'
+import { iniciarSessao, finalizarSessao, registrarCarga } from '../services/historicoService'
 
-// Mock — substituir por treinoService.getTreinoById(id) quando o backend estiver integrado
-const TREINO = {
-  id: 1,
-  nome: 'Treino A — Peito e Tríceps',
-  exercicios: [
-    {
-      id: 1,
-      nome: 'Supino Reto',
-      equipamento: 'Barra livre',
-      grupo: 'Peito',
-      numSeries: 4,
-      repsAlvo: '8-12 reps',
-      descansoSeg: 60,
-      ultimaCarga: 80,
-    },
-    {
-      id: 2,
-      nome: 'Supino Inclinado',
-      equipamento: 'Halteres',
-      grupo: 'Peito',
-      numSeries: 4,
-      repsAlvo: '4x10',
-      descansoSeg: 60,
-      ultimaCarga: 60,
-    },
-    {
-      id: 3,
-      nome: 'Crucifixo',
-      equipamento: 'Halteres',
-      grupo: 'Peito',
-      numSeries: 4,
-      repsAlvo: '3x12',
-      descansoSeg: 45,
-      ultimaCarga: 14,
-    },
-    {
-      id: 4,
-      nome: 'Tríceps Pulley',
-      equipamento: 'Cabo',
-      grupo: 'Tríceps',
-      numSeries: 4,
-      repsAlvo: '4x12',
-      descansoSeg: 45,
-      ultimaCarga: 32,
-    },
-    {
-      id: 5,
-      nome: 'Tríceps Francês',
-      equipamento: 'Halteres',
-      grupo: 'Tríceps',
-      numSeries: 3,
-      repsAlvo: '3x12',
-      descansoSeg: 45,
-      ultimaCarga: 22,
-    },
-  ],
+function adaptarExercicio(ex) {
+  return {
+    id:          ex.id,
+    nome:        ex.nome,
+    equipamento: ex.equipamento ?? '—',
+    grupo:       ex.grupoMuscular ?? '—',
+    numSeries:   ex.seriesPadrao ?? 3,
+    repsAlvo:    ex.repeticoesPadrao ? `${ex.seriesPadrao}x${ex.repeticoesPadrao}` : '—',
+    descansoSeg: 60,
+    ultimaCarga: ex.cargaInicialKg ?? 0,
+  }
 }
 
 function formatarTempo(seg) {
@@ -113,21 +70,43 @@ function CircularTimer({ segundosRestantes, totalSegundos }) {
 
 function ExecucaoTreino() {
   const navigate = useNavigate()
-  const totalExercicios = TREINO.exercicios.length
+  const { id } = useParams()
+
+  const [treino, setTreino]           = useState(null)
+  const [historicoId, setHistoricoId] = useState(null)
+  const [carregando, setCarregando]   = useState(true)
+
+  const totalExercicios = treino?.exercicios?.length ?? 0
 
   // Índices
   const [exIdx, setExIdx] = useState(0)
 
   // Dados de cada série por exercício: dadosSeries[exIdx][serieIdx]
-  const [dadosSeries, setDadosSeries] = useState(() =>
-    TREINO.exercicios.map(ex =>
-      Array.from({ length: ex.numSeries }, () => ({
-        carga: String(ex.ultimaCarga),
-        reps: '',
-        concluida: false,
-      }))
-    )
-  )
+  const [dadosSeries, setDadosSeries] = useState([])
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const t = await getTreinoById(id)
+        const exerciciosAdaptados = (t.exercicios ?? []).map(adaptarExercicio)
+        const tAdaptado = { ...t, exercicios: exerciciosAdaptados }
+        setTreino(tAdaptado)
+        setDadosSeries(
+          exerciciosAdaptados.map(ex =>
+            Array.from({ length: ex.numSeries }, () => ({
+              carga: String(ex.ultimaCarga),
+              reps: '',
+              concluida: false,
+            }))
+          )
+        )
+        const sessao = await iniciarSessao(Number(id))
+        setHistoricoId(sessao.id)
+      } catch { /* segue sem sessão registrada */ }
+      setCarregando(false)
+    }
+    init()
+  }, [id])
 
   // Série ativa dentro do exercício atual
   const serieAtiva = dadosSeries[exIdx].findIndex(s => !s.concluida)
@@ -162,7 +141,7 @@ function ExecucaoTreino() {
   // Modal de encerrar
   const [modalEncerrar, setModalEncerrar] = useState(false)
 
-  const exercicioAtual = TREINO.exercicios[exIdx]
+  const exercicioAtual = treino?.exercicios?.[exIdx]
 
   function atualizarSerie(campo, valor) {
     setDadosSeries(prev => {
@@ -173,18 +152,29 @@ function ExecucaoTreino() {
   }
 
   function concluirSerie() {
-    if (serieAtiva < 0) return
+    if (serieAtiva < 0 || !exercicioAtual) return
     const cargaAtual = parseFloat(dadosSeries[exIdx][serieAtiva].carga) || 0
+    const repsAtual  = parseInt(dadosSeries[exIdx][serieAtiva].reps) || 0
     setDadosSeries(prev => {
       const novo = prev.map(ex => ex.map(s => ({ ...s })))
       novo[exIdx][serieAtiva].concluida = true
       return novo
     })
+    // Registrar carga no backend (sem bloquear a UI)
+    if (historicoId && exercicioAtual.id) {
+      registrarCarga({
+        historicoId,
+        exercicioId:       exercicioAtual.id,
+        numeroSerie:       serieAtiva + 1,
+        cargaKg:           cargaAtual,
+        repeticoesFeiras:  repsAtual,
+      }).catch(() => {})
+    }
     // Detectar PR
     if (cargaAtual > exercicioAtual.ultimaCarga) {
       setPr({
-        nome: exercicioAtual.nome,
-        nova: cargaAtual,
+        nome:     exercicioAtual.nome,
+        nova:     cargaAtual,
         anterior: exercicioAtual.ultimaCarga,
       })
     }
@@ -227,8 +217,10 @@ function ExecucaoTreino() {
     setTimerSeg(t => Math.max(0, t + delta))
   }
 
-  function finalizarTreino() {
-    // TODO: historicoService.registrarSessao() com dadosSeries
+  async function finalizarTreino() {
+    if (historicoId) {
+      try { await finalizarSessao(historicoId) } catch { /* silencioso */ }
+    }
     navigate('/treinos')
   }
 
@@ -258,6 +250,14 @@ function ExecucaoTreino() {
 
   const progressoPct = ((exIdx + 1) / totalExercicios) * 100
 
+  if (carregando || !treino || !exercicioAtual) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+        <p className="text-gray-500 text-sm">Carregando treino...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#0D0D0D] flex flex-col">
 
@@ -268,7 +268,7 @@ function ExecucaoTreino() {
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors shrink-0"
         >
           <ArrowLeft size={18} />
-          <span className="hidden sm:block text-sm font-medium truncate max-w-[180px]">{TREINO.nome}</span>
+          <span className="hidden sm:block text-sm font-medium truncate max-w-[180px]">{treino.nome}</span>
         </button>
 
         {/* Progresso central */}
@@ -466,7 +466,7 @@ function ExecucaoTreino() {
 
             {/* Dots de progresso */}
             <div className="flex items-center gap-2">
-              {TREINO.exercicios.map((_, i) => {
+              {treino.exercicios.map((_, i) => {
                 const status = statusExercicio(i)
                 return (
                   <div
@@ -519,7 +519,7 @@ function ExecucaoTreino() {
           <div>
             <h3 className="text-white font-bold text-base mb-4">Progresso do treino</h3>
             <div className="flex flex-col">
-              {TREINO.exercicios.map((ex, i) => {
+              {treino.exercicios.map((ex, i) => {
                 const status = statusExercicio(i)
                 const melhor = melhorCargaExercicio(i)
                 const seriesConcl = dadosSeries[i].filter(s => s.concluida).length
@@ -539,7 +539,7 @@ function ExecucaoTreino() {
                       >
                         {status === 'concluido' ? <Check size={13} strokeWidth={3} /> : i + 1}
                       </div>
-                      {i < TREINO.exercicios.length - 1 && (
+                      {i < treino.exercicios.length - 1 && (
                         <div className={`w-px flex-1 my-1 min-h-[24px] ${
                           status === 'concluido' ? 'bg-green-500/40' : 'bg-gray-800'
                         }`} />

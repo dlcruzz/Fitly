@@ -81,7 +81,8 @@ function Onboarding() {
   }
 
   async function concluir() {
-    // TODO: salvar perfil via API antes de redirecionar
+    // Dados salvos localmente — endpoint de perfil será adicionado ao backend futuramente
+    localStorage.setItem('fitly_perfil', JSON.stringify(dados))
     navigate('/dashboard')
   }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Play, TrendingUp, Calendar, Dumbbell, Target, X, ChevronUp } from 'lucide-react'
 import {
   LineChart,
@@ -10,46 +11,21 @@ import {
   CartesianGrid,
 } from 'recharts'
 import AppLayout from '../components/layout/AppLayout'
+import { useAuth } from '../context/AuthContext'
+import { getTreinos } from '../services/treinoService'
+import { getMetas } from '../services/metasService'
+import { getHistoricoUsuario } from '../services/historicoService'
 
-// Mock data — substituir por chamadas à API quando o backend estiver integrado
-const USUARIO = {
-  nome: 'Danilo Cruz',
-  objetivo: 'Hipertrofia',
-  nivel: 'Intermediário',
-  streak: 12,
-}
-
-const TREINO_HOJE = {
-  nome: 'Peito e Tríceps',
-  exercicios: [
-    { id: 1, nome: 'Supino Reto', series: '4x8-12', ultimaCarga: '80kg' },
-    { id: 2, nome: 'Supino Inclinado', series: '4x10', ultimaCarga: '60kg' },
-    { id: 3, nome: 'Crucifixo', series: '3x12', ultimaCarga: '16kg' },
-    { id: 4, nome: 'Tríceps Pulley', series: '4x12', ultimaCarga: '35kg' },
-    { id: 5, nome: 'Tríceps Francês', series: '3x12', ultimaCarga: '24kg' },
-  ],
-}
+const DIAS_SEMANA_NOMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 
 const FREQUENCIA_SEMANAL = [
-  { dia: 'Seg', treinou: true, hoje: false },
-  { dia: 'Ter', treinou: true, hoje: false },
+  { dia: 'Seg', treinou: false, hoje: false },
+  { dia: 'Ter', treinou: false, hoje: false },
   { dia: 'Qua', treinou: false, hoje: false },
-  { dia: 'Qui', treinou: true, hoje: false },
-  { dia: 'Sex', treinou: true, hoje: false },
+  { dia: 'Qui', treinou: false, hoje: false },
+  { dia: 'Sex', treinou: false, hoje: false },
   { dia: 'Sab', treinou: false, hoje: false },
-  { dia: 'Dom', treinou: false, hoje: true },
-]
-
-const METAS = [
-  { Icone: Calendar, titulo: '4 treinos esta semana', progresso: 3, total: 4, label: '3 de 4' },
-  { Icone: Dumbbell, titulo: '100kg no Supino', progresso: 80, total: 100, label: '80kg / 100kg' },
-  { Icone: Target, titulo: '20 treinos em Janeiro', progresso: 18, total: 20, label: '18 de 20' },
-]
-
-const RECORDES = [
-  { exercicio: 'Supino Reto', carga: '82.5kg', tempo: 'há 3 dias' },
-  { exercicio: 'Agachamento', carga: '100kg', tempo: 'há 3 dias' },
-  { exercicio: 'Desenvolvimento', carga: '50kg', tempo: 'há 3 dias' },
+  { dia: 'Dom', treinou: false, hoje: false },
 ]
 
 const EVOLUCAO_PESO = [
@@ -57,18 +33,12 @@ const EVOLUCAO_PESO = [
   { semana: 'Sem 2', peso: 82.1 },
   { semana: 'Sem 3', peso: 81.6 },
   { semana: 'Sem 4', peso: 81.0 },
-  { semana: 'Sem 5', peso: 80.4 },
-  { semana: 'Sem 6', peso: 79.9 },
-  { semana: 'Sem 7', peso: 79.3 },
-  { semana: 'Hoje', peso: 78.9 },
+  { semana: 'Hoje', peso: 81.0 },
 ]
 
-const PROGRESSAO_FORCA = [
-  { nome: 'Supino Reto', cargaAtual: '80kg', ganhoKg: '+8.5kg', pct: '+12%' },
-  { nome: 'Agachamento', cargaAtual: '100kg', ganhoKg: '+7.5kg', pct: '+8%' },
-  { nome: 'Desenvolvimento', cargaAtual: '50kg', ganhoKg: '+6.5kg', pct: '+15%' },
-  { nome: 'Remada Curvada', cargaAtual: '70kg', ganhoKg: '+6kg', pct: '+9%' },
-]
+const PROGRESSAO_FORCA = []
+
+const RECORDES = []
 
 const SENSACOES = [
   { id: 'excelente', label: 'Excelente' },
@@ -118,7 +88,14 @@ function CircularProgress({ value, total, size = 80 }) {
 }
 
 function Dashboard() {
-  const primeiroNome = USUARIO.nome.split(' ')[0]
+  const navigate = useNavigate()
+  const { usuario } = useAuth()
+  const primeiroNome = (usuario?.nome ?? 'Usuário').split(' ')[0]
+
+  const [treinos, setTreinos]     = useState([])
+  const [metas, setMetas]         = useState([])
+  const [historico, setHistorico] = useState([])
+  const [carregando, setCarregando] = useState(true)
 
   const [mostrarBannerCheckin, setMostrarBannerCheckin] = useState(false)
   const [modalCheckinAberto, setModalCheckinAberto] = useState(false)
@@ -126,7 +103,33 @@ function Dashboard() {
 
   useEffect(() => {
     setMostrarBannerCheckin(precisaCheckin())
+
+    async function carregar() {
+      try {
+        const [t, m, h] = await Promise.all([
+          getTreinos(),
+          getMetas(),
+          getHistoricoUsuario(),
+        ])
+        setTreinos(t ?? [])
+        setMetas(m ?? [])
+        setHistorico(h ?? [])
+      } catch {
+        // silencioso — mostra estado vazio
+      } finally {
+        setCarregando(false)
+      }
+    }
+    carregar()
   }, [])
+
+  const diaHoje = DIAS_SEMANA_NOMES[new Date().getDay()]
+  const treinoHoje = treinos.find(t =>
+    (t.diasSemana ?? '').toLowerCase().includes(diaHoje.toLowerCase())
+  ) ?? treinos[0] ?? null
+
+  const metasAtivas = metas.filter(m => m.status !== 'CONCLUIDA').slice(0, 3)
+  const totalTreinosMes = historico.length
 
   function salvarCheckin() {
     if (!checkinDados.peso || !checkinDados.sensacao) return
@@ -141,7 +144,7 @@ function Dashboard() {
     EVOLUCAO_PESO[EVOLUCAO_PESO.length - 1].peso - EVOLUCAO_PESO[0].peso
 
   return (
-    <AppLayout usuario={USUARIO}>
+    <AppLayout>
 
       {/* Banner de check-in semanal */}
       {mostrarBannerCheckin && (
@@ -178,9 +181,15 @@ function Dashboard() {
           <h1 className="text-white font-extrabold text-2xl sm:text-3xl">
             Bom dia, {primeiroNome} 👋
           </h1>
-          <p className="text-gray-400 mt-1 text-sm">Hoje é dia de {TREINO_HOJE.nome}</p>
+          <p className="text-gray-400 mt-1 text-sm">
+            {treinoHoje ? `Hoje é dia de ${treinoHoje.nome}` : 'Nenhum treino para hoje'}
+          </p>
         </div>
-        <button className="flex items-center justify-center gap-2 bg-primary text-[#0D0D0D] font-bold px-5 py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all duration-200 shrink-0 w-full sm:w-auto">
+        <button
+          onClick={() => treinoHoje && navigate(`/treinos/${treinoHoje.id}/executar`)}
+          disabled={!treinoHoje}
+          className="flex items-center justify-center gap-2 bg-primary text-[#0D0D0D] font-bold px-5 py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all duration-200 shrink-0 w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <Play size={15} fill="currentColor" />
           Iniciar treino de hoje
         </button>
@@ -190,32 +199,31 @@ function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
         <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-4 lg:p-5">
-          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Treinos esse mês</p>
-          <p className="text-primary font-extrabold text-3xl lg:text-4xl">18</p>
-          <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
-            <TrendingUp size={12} />
-            vs 14 mês passado
-          </p>
+          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Treinos registrados</p>
+          <p className="text-primary font-extrabold text-3xl lg:text-4xl">{carregando ? '—' : totalTreinosMes}</p>
+          <p className="text-gray-500 text-xs mt-2">no histórico total</p>
         </div>
 
         <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-4 lg:p-5">
-          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Sequência atual</p>
-          <p className="text-primary font-extrabold text-3xl lg:text-4xl">12</p>
-          <p className="text-gray-500 text-xs mt-2">dias consecutivos 🔥</p>
+          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Treinos cadastrados</p>
+          <p className="text-primary font-extrabold text-3xl lg:text-4xl">{carregando ? '—' : treinos.length}</p>
+          <p className="text-gray-500 text-xs mt-2">na sua rotina 💪</p>
         </div>
 
         <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-4 lg:p-5">
-          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Meta semanal</p>
+          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Metas ativas</p>
           <div className="flex items-center gap-2 lg:gap-3 mt-1">
-            <CircularProgress value={3} total={4} size={70} />
-            <p className="text-gray-500 text-xs leading-snug">treinos esta semana</p>
+            <CircularProgress value={metasAtivas.length} total={Math.max(metasAtivas.length, 1)} size={70} />
+            <p className="text-gray-500 text-xs leading-snug">em andamento</p>
           </div>
         </div>
 
         <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-4 lg:p-5">
-          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Carga média</p>
-          <p className="text-primary font-extrabold text-3xl lg:text-4xl">+8kg</p>
-          <p className="text-gray-500 text-xs mt-2">evolução este mês</p>
+          <p className="text-gray-400 text-xs lg:text-sm mb-2 lg:mb-3">Metas concluídas</p>
+          <p className="text-primary font-extrabold text-3xl lg:text-4xl">
+            {carregando ? '—' : metas.filter(m => m.status === 'CONCLUIDA').length}
+          </p>
+          <p className="text-gray-500 text-xs mt-2">objetivos atingidos</p>
         </div>
 
       </div>
@@ -227,31 +235,45 @@ function Dashboard() {
           <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-5 lg:p-6">
             <div className="flex items-center gap-3 mb-5 flex-wrap">
               <h2 className="text-white font-bold text-lg">Treino de Hoje</h2>
-              <span className="bg-[#2A2A2A] text-primary text-xs font-semibold px-3 py-1 rounded-full border border-gray-700">
-                {TREINO_HOJE.nome}
-              </span>
+              {treinoHoje && (
+                <span className="bg-[#2A2A2A] text-primary text-xs font-semibold px-3 py-1 rounded-full border border-gray-700">
+                  {treinoHoje.nome}
+                </span>
+              )}
             </div>
-            <div className="flex flex-col mb-5">
-              {TREINO_HOJE.exercicios.map((ex, i) => (
-                <div
-                  key={ex.id}
-                  className="flex items-center justify-between py-3 border-b border-gray-800/50 last:border-0 gap-2"
-                >
-                  <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-                    <span className="text-gray-600 text-sm w-4 text-center shrink-0">{i + 1}</span>
-                    <Dumbbell size={14} className="text-gray-600 shrink-0" />
-                    <span className="text-white text-sm font-medium truncate">{ex.nome}</span>
+            {carregando ? (
+              <p className="text-gray-500 text-sm py-6 text-center">Carregando...</p>
+            ) : !treinoHoje ? (
+              <p className="text-gray-500 text-sm py-6 text-center">Nenhum treino cadastrado para hoje.</p>
+            ) : (
+              <div className="flex flex-col mb-5">
+                {(treinoHoje.exercicios ?? []).map((ex, i) => (
+                  <div
+                    key={ex.id}
+                    className="flex items-center justify-between py-3 border-b border-gray-800/50 last:border-0 gap-2"
+                  >
+                    <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+                      <span className="text-gray-600 text-sm w-4 text-center shrink-0">{i + 1}</span>
+                      <Dumbbell size={14} className="text-gray-600 shrink-0" />
+                      <span className="text-white text-sm font-medium truncate">{ex.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-3 lg:gap-5 shrink-0">
+                      <span className="text-gray-500 text-xs lg:text-sm">
+                        {ex.seriesPadrao}x{ex.repeticoesPadrao}
+                      </span>
+                      <span className="text-gray-400 text-xs lg:text-sm whitespace-nowrap">
+                        carga: <span className="text-primary font-semibold">{ex.cargaInicialKg ?? '—'}kg</span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 lg:gap-5 shrink-0">
-                    <span className="text-gray-500 text-xs lg:text-sm">{ex.series}</span>
-                    <span className="text-gray-400 text-xs lg:text-sm whitespace-nowrap">
-                      última: <span className="text-primary font-semibold">{ex.ultimaCarga}</span>
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="w-full bg-primary text-[#0D0D0D] font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-95 transition-all duration-200">
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => treinoHoje && navigate(`/treinos/${treinoHoje.id}/executar`)}
+              disabled={!treinoHoje}
+              className="w-full bg-primary text-[#0D0D0D] font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-95 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               Iniciar treino agora
             </button>
           </div>
@@ -260,25 +282,36 @@ function Dashboard() {
         <div className="lg:col-span-2">
           <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-5 lg:p-6">
             <h2 className="text-white font-bold text-lg mb-5">Metas ativas</h2>
-            <div className="flex flex-col gap-5">
-              {METAS.map(({ Icone, titulo, progresso, total, label }) => (
-                <div key={titulo}>
-                  <div className="flex items-center justify-between mb-2 gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icone size={14} className="text-primary shrink-0" />
-                      <span className="text-white text-sm truncate">{titulo}</span>
+            {carregando ? (
+              <p className="text-gray-500 text-sm text-center py-6">Carregando...</p>
+            ) : metasAtivas.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">Nenhuma meta ativa.</p>
+            ) : (
+              <div className="flex flex-col gap-5">
+                {metasAtivas.map(meta => {
+                  const pct = meta.percentualConcluido ?? ((meta.valorAtual / meta.valorAlvo) * 100) ?? 0
+                  return (
+                    <div key={meta.id}>
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Target size={14} className="text-primary shrink-0" />
+                          <span className="text-white text-sm truncate">{meta.titulo}</span>
+                        </div>
+                        <span className="text-gray-500 text-xs shrink-0">
+                          {meta.valorAtual ?? 0} / {meta.valorAlvo}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
                     </div>
-                    <span className="text-gray-500 text-xs shrink-0">{label}</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: `${(progresso / total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 

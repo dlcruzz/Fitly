@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Trophy, TrendingUp, ChevronDown } from 'lucide-react'
 import {
   AreaChart,
@@ -13,13 +13,8 @@ import {
   ReferenceLine,
 } from 'recharts'
 import AppLayout from '../components/layout/AppLayout'
-
-const USUARIO = {
-  nome: 'Danilo Cruz',
-  objetivo: 'Hipertrofia',
-  nivel: 'Intermediário',
-  streak: 12,
-}
+import { getTreinos } from '../services/treinoService'
+import { getEvolucaoCarga, getHistoricoUsuario } from '../services/historicoService'
 
 const PERIODOS = ['7 dias', '30 dias', '3 meses', 'Todo período']
 
@@ -211,7 +206,7 @@ function TooltipFrequencia({ active, payload, label }) {
   )
 }
 
-function SeletorExercicio({ exercicio, onChange }) {
+function SeletorExercicio({ exercicio, exercicios, onChange }) {
   const [aberto, setAberto] = useState(false)
 
   return (
@@ -225,7 +220,7 @@ function SeletorExercicio({ exercicio, onChange }) {
       </button>
       {aberto && (
         <div className="absolute right-0 top-10 z-10 bg-[#1E1E1E] border border-gray-700 rounded-xl shadow-xl overflow-hidden w-44">
-          {EXERCICIOS_DISPONIVEIS.map(ex => (
+          {exercicios.map(ex => (
             <button
               key={ex}
               onClick={() => { onChange(ex); setAberto(false) }}
@@ -246,12 +241,47 @@ function SeletorExercicio({ exercicio, onChange }) {
 
 function Evolucao() {
   const [periodo, setPeriodo] = useState('30 dias')
-  const [exercicio, setExercicio] = useState('Supino Reto')
+  const [exercicios, setExercicios]         = useState([])
+  const [exercicioSel, setExercicioSel]     = useState(null)
+  const [dadosCargaApi, setDadosCargaApi]   = useState([])
+  const [historico, setHistorico]           = useState([])
+  const [carregando, setCarregando]         = useState(true)
 
-  const dadosCarga = DADOS_CARGA[exercicio]?.[periodo] ?? []
-  const mediaFrequencia = (
-    DADOS_FREQUENCIA.reduce((acc, d) => acc + d.treinos, 0) / DADOS_FREQUENCIA.length
-  ).toFixed(1)
+  useEffect(() => {
+    async function carregar() {
+      try {
+        const [treinos, hist] = await Promise.all([getTreinos(), getHistoricoUsuario()])
+        setHistorico(hist ?? [])
+        const todos = (treinos ?? []).flatMap(t => t.exercicios ?? [])
+        const unicos = Object.values(
+          todos.reduce((acc, ex) => { if (!acc[ex.id]) acc[ex.id] = ex; return acc }, {})
+        )
+        setExercicios(unicos)
+        if (unicos.length > 0) setExercicioSel(unicos[0])
+      } catch { /* silencioso */ }
+      setCarregando(false)
+    }
+    carregar()
+  }, [])
+
+  useEffect(() => {
+    if (!exercicioSel?.id) return
+    getEvolucaoCarga(exercicioSel.id)
+      .then(dados => setDadosCargaApi((dados ?? []).map(d => ({ data: d.data, carga: d.cargaMaxima ?? d.carga ?? 0 }))))
+      .catch(() => setDadosCargaApi([]))
+  }, [exercicioSel])
+
+  const dadosCarga = dadosCargaApi.length > 0
+    ? dadosCargaApi
+    : (DADOS_CARGA[exercicioSel?.nome]?.[periodo] ?? [])
+
+  const EXERCICIOS_DISPONIVEIS = exercicios.length > 0
+    ? exercicios.map(e => e.nome)
+    : Object.keys(DADOS_CARGA)
+
+  const mediaFrequencia = historico.length > 0
+    ? (historico.length / Math.max(1, Math.ceil(historico.length / 4))).toFixed(1)
+    : (DADOS_FREQUENCIA.reduce((acc, d) => acc + d.treinos, 0) / DADOS_FREQUENCIA.length).toFixed(1)
 
   // Rótulos de mês no heatmap
   const labelsMes = useMemo(() => {
@@ -268,7 +298,7 @@ function Evolucao() {
   }, [])
 
   return (
-    <AppLayout usuario={USUARIO}>
+    <AppLayout>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7">
@@ -333,7 +363,11 @@ function Evolucao() {
               <h2 className="text-white font-bold text-lg">Progressão de Carga</h2>
               <p className="text-gray-500 text-xs mt-0.5">Evolução do peso por exercício</p>
             </div>
-            <SeletorExercicio exercicio={exercicio} onChange={setExercicio} />
+            <SeletorExercicio
+              exercicio={exercicioSel?.nome ?? '—'}
+              exercicios={EXERCICIOS_DISPONIVEIS}
+              onChange={nome => setExercicioSel(exercicios.find(e => e.nome === nome) ?? { nome })}
+            />
           </div>
 
           <ResponsiveContainer width="100%" height={220}>

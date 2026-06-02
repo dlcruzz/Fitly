@@ -2,105 +2,30 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Calendar, MoreHorizontal, Pencil, Copy, Trash2, X } from 'lucide-react'
 import AppLayout from '../components/layout/AppLayout'
-
-const USUARIO = {
-  nome: 'Danilo Cruz',
-  objetivo: 'Hipertrofia',
-  nivel: 'Intermediário',
-  streak: 12,
-}
+import { getTreinos, createTreino, deleteTreino } from '../services/treinoService'
 
 const FILTROS = ['Todos', 'Peito', 'Costas', 'Pernas', 'Ombro', 'Braços', 'Cardio']
 
-const TREINOS_INICIAIS = [
-  {
-    id: 1,
-    nome: 'Treino A — Peito',
-    grupo: 'Peito',
-    tag: 'Peito e Tríceps',
-    totalExercicios: 5,
-    duracaoMin: 60,
-    diaSemana: 'Segunda-feira',
-    hoje: true,
-    exercicios: [
-      { nome: 'Supino Reto', series: '4x8-12' },
-      { nome: 'Supino Inclinado', series: '4x10' },
-      { nome: 'Crucifixo', series: '3x12' },
-      { nome: 'Supino Fechado', series: '3x10' },
-      { nome: 'Tríceps Pulley', series: '4x12' },
-    ],
-  },
-  {
-    id: 2,
-    nome: 'Treino B — Costas',
-    grupo: 'Costas',
-    tag: 'Costas e Bíceps',
-    totalExercicios: 6,
-    duracaoMin: 70,
-    diaSemana: 'Terça-feira',
+function adaptarTreino(t) {
+  const exercicios = (t.exercicios ?? []).map(ex => ({
+    nome: ex.nome,
+    series: ex.seriesPadrao && ex.repeticoesPadrao
+      ? `${ex.seriesPadrao}x${ex.repeticoesPadrao}`
+      : '—',
+  }))
+  return {
+    id: t.id,
+    nome: t.nome,
+    grupo: t.descricao ?? t.diasSemana ?? '',
+    tag: t.descricao ?? t.diasSemana ?? t.nome,
+    totalExercicios: exercicios.length,
+    duracaoMin: exercicios.length * 10,
+    diaSemana: t.diasSemana ?? '',
     hoje: false,
-    exercicios: [
-      { nome: 'Puxada Frontal', series: '4x10' },
-      { nome: 'Remada Curvada', series: '4x8-12' },
-      { nome: 'Remada Unilateral', series: '3x12' },
-      { nome: 'Pulldown', series: '3x12' },
-      { nome: 'Rosca Direta', series: '3x10' },
-      { nome: 'Rosca Martelo', series: '3x12' },
-    ],
-  },
-  {
-    id: 3,
-    nome: 'Treino C — Pernas',
-    grupo: 'Pernas',
-    tag: 'Pernas',
-    totalExercicios: 5,
-    duracaoMin: 75,
-    diaSemana: 'Quarta-feira',
-    hoje: false,
-    exercicios: [
-      { nome: 'Agachamento Livre', series: '4x8-12' },
-      { nome: 'Leg Press', series: '4x12' },
-      { nome: 'Cadeira Extensora', series: '3x15' },
-      { nome: 'Mesa Flexora', series: '3x12' },
-      { nome: 'Panturrilha', series: '4x15' },
-    ],
-  },
-  {
-    id: 4,
-    nome: 'Treino D — Ombro',
-    grupo: 'Ombro',
-    tag: 'Ombro e Trapézio',
-    totalExercicios: 5,
-    duracaoMin: 55,
-    diaSemana: 'Quinta-feira',
-    hoje: false,
-    exercicios: [
-      { nome: 'Desenvolvimento', series: '4x10' },
-      { nome: 'Elevação Lateral', series: '4x12' },
-      { nome: 'Elevação Frontal', series: '3x12' },
-      { nome: 'Encolhimento', series: '3x15' },
-      { nome: 'Face Pull', series: '3x15' },
-    ],
-  },
-  {
-    id: 5,
-    nome: 'Treino E — Braços',
-    grupo: 'Braços',
-    tag: 'Braços',
-    totalExercicios: 6,
-    duracaoMin: 50,
-    diaSemana: 'Sexta-feira',
-    hoje: false,
-    exercicios: [
-      { nome: 'Rosca Direta', series: '4x10' },
-      { nome: 'Rosca Martelo', series: '3x12' },
-      { nome: 'Tríceps Pulley', series: '4x12' },
-      { nome: 'Tríceps Francês', series: '3x12' },
-      { nome: 'Rosca Concentrada', series: '3x12' },
-      { nome: 'Mergulho', series: '3x10' },
-    ],
-  },
-]
+    exercicios,
+    ativo: t.ativo,
+  }
+}
 
 const PREVIEW_MAX = 3
 
@@ -321,9 +246,17 @@ function CardTreino({ treino, onIniciar, onVerTreino, onEditar, onDuplicar, onEx
 
 function Treinos() {
   const navigate = useNavigate()
-  const [treinos, setTreinos] = useState(TREINOS_INICIAIS)
+  const [treinos, setTreinos] = useState([])
+  const [carregando, setCarregando] = useState(true)
   const [filtroAtivo, setFiltroAtivo] = useState('Todos')
   const [modalAberto, setModalAberto] = useState(false)
+
+  useEffect(() => {
+    getTreinos()
+      .then(data => setTreinos((data ?? []).map(adaptarTreino)))
+      .catch(() => {})
+      .finally(() => setCarregando(false))
+  }, [])
 
   const treinosFiltrados = filtroAtivo === 'Todos'
     ? treinos
@@ -338,45 +271,42 @@ function Treinos() {
   }
 
   function handleVerTreino(id) {
-    // TODO: navegar para detalhe do treino
+    navigate(`/treinos/${id}/executar`)
   }
 
   function handleEditar(treino) {
-    // TODO: abrir modal de edição com dados do treino
+    // Edição de treino: abertura de modal com dados será implementada futuramente
   }
 
-  function handleDuplicar(treino) {
-    const novoTreino = {
-      ...treino,
-      id: Date.now(),
-      nome: `${treino.nome} (cópia)`,
-      hoje: false,
-    }
-    setTreinos(prev => [...prev, novoTreino])
+  async function handleDuplicar(treino) {
+    try {
+      const novo = await createTreino({
+        nome: `${treino.nome} (cópia)`,
+        descricao: treino.tag,
+        diasSemana: treino.diaSemana,
+        ativo: true,
+      })
+      setTreinos(prev => [...prev, adaptarTreino(novo)])
+    } catch { /* silencioso */ }
   }
 
-  function handleExcluir(id) {
-    setTreinos(prev => prev.filter(t => t.id !== id))
+  async function handleExcluir(id) {
+    try {
+      await deleteTreino(id)
+      setTreinos(prev => prev.filter(t => t.id !== id))
+    } catch { /* silencioso */ }
   }
 
-  function handleCriarTreino({ nome, grupo, diaSemana }) {
-    const novo = {
-      id: Date.now(),
-      nome,
-      grupo,
-      tag: grupo,
-      totalExercicios: 0,
-      duracaoMin: 0,
-      diaSemana,
-      hoje: false,
-      exercicios: [],
-    }
-    setTreinos(prev => [...prev, novo])
+  async function handleCriarTreino({ nome, grupo, diaSemana }) {
+    try {
+      const novo = await createTreino({ nome, descricao: grupo, diasSemana: diaSemana, ativo: true })
+      setTreinos(prev => [...prev, adaptarTreino(novo)])
+    } catch { /* silencioso */ }
     setModalAberto(false)
   }
 
   return (
-    <AppLayout usuario={USUARIO}>
+    <AppLayout>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
@@ -414,6 +344,14 @@ function Treinos() {
 
       {/* Grid de cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {carregando && (
+          <p className="col-span-3 text-gray-500 text-sm text-center py-10">Carregando treinos...</p>
+        )}
+        {!carregando && treinosFiltrados.length === 0 && filtroAtivo === 'Todos' && (
+          <p className="col-span-3 text-gray-500 text-sm text-center py-10">
+            Nenhum treino cadastrado ainda. Crie seu primeiro treino!
+          </p>
+        )}
         {treinosFiltrados.map(treino => (
           <CardTreino
             key={treino.id}

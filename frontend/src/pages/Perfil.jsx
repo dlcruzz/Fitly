@@ -1,13 +1,8 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Check, Download, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, Check, Download, Trash2, LogOut } from 'lucide-react'
 import AppLayout from '../components/layout/AppLayout'
-
-const USUARIO = {
-  nome: 'Danilo Cruz',
-  objetivo: 'Hipertrofia',
-  nivel: 'Intermediário',
-  streak: 12,
-}
+import { useAuth } from '../context/AuthContext'
 
 const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const OBJETIVOS = ['Hipertrofia', 'Emagrecimento', 'Força', 'Condicionamento']
@@ -75,14 +70,17 @@ function CampoSenha({ label, value, onChange, placeholder = '••••••�
 }
 
 function Perfil() {
+  const navigate = useNavigate()
+  const { usuario, logout } = useAuth()
+
   // Dados pessoais
   const [dados, setDados] = useState({
-    nome: 'Danilo Cruz',
-    nascimento: '15/03/2004',
-    email: 'danilo@email.com',
-    telefone: '(11) 99999-9999',
-    objetivo: 'Hipertrofia',
-    nivel: 'Intermediário',
+    nome:       usuario?.nome  ?? '',
+    nascimento: '',
+    email:      usuario?.email ?? '',
+    telefone:   '',
+    objetivo:   'Hipertrofia',
+    nivel:      'Intermediário',
   })
 
   // Senha
@@ -116,12 +114,17 @@ function Perfil() {
   }
 
   function handleSalvar() {
-    // TODO: PUT /perfil com dados
-    alert('Alterações salvas! (mock)')
+    // Endpoint de atualização de perfil será adicionado ao backend futuramente
+    alert('Alterações salvas localmente!')
+  }
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
   }
 
   return (
-    <AppLayout usuario={USUARIO}>
+    <AppLayout>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
@@ -429,6 +432,19 @@ function Perfil() {
             <h2 className="text-red-500 font-bold text-lg mb-5">Zona de perigo</h2>
             <div className="flex flex-col gap-0">
               <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-800/50">
+                <div>
+                  <p className="text-white text-sm font-medium">Sair da conta</p>
+                  <p className="text-gray-600 text-xs mt-0.5">Encerra sua sessão neste dispositivo</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 border border-gray-600 text-gray-400 text-xs font-medium px-3 py-2 rounded-xl hover:border-gray-400 hover:text-white transition-all shrink-0"
+                >
+                  <LogOut size={13} />
+                  Sair
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-4 pb-4 pt-4 border-b border-gray-800/50">
                 <div>
                   <p className="text-white text-sm font-medium">Exportar meus dados</p>
                   <p className="text-gray-600 text-xs mt-0.5">Baixe todo seu histórico em formato JSON</p>

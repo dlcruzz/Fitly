@@ -1,13 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Target, Trophy, Flame, Plus, Check, X, MoreHorizontal } from 'lucide-react'
 import AppLayout from '../components/layout/AppLayout'
-
-const USUARIO = {
-  nome: 'Danilo Cruz',
-  objetivo: 'Hipertrofia',
-  nivel: 'Intermediário',
-  streak: 12,
-}
+import { getMetas, createMeta, deleteMeta } from '../services/metasService'
 
 const TIPOS_META = [
   { id: 'frequencia_semanal', label: 'Frequência semanal' },
@@ -299,44 +293,82 @@ function CardMetaConcluida({ meta }) {
   )
 }
 
-function Metas() {
-  const [metasAtivas, setMetasAtivas] = useState(METAS_ATIVAS_INICIAL)
-  const [modalAberto, setModalAberto] = useState(false)
+function adaptarMeta(m, idx) {
+  const valorAtual = m.valorAtual ?? 0
+  const valorAlvo  = m.valorAlvo  ?? 100
+  const pct        = m.percentualConcluido ?? ((valorAtual / valorAlvo) * 100)
+  return {
+    id:       m.id,
+    destaque: idx === 0,
+    titulo:   m.titulo,
+    tipo:     TIPOS_META.find(t => t.id === m.tipo)?.label ?? m.tipo,
+    badge:    m.status === 'CONCLUIDA' ? 'CONCLUÍDA' : 'EM ANDAMENTO',
+    prazo:    m.dataLimite ? `Vence em ${m.dataLimite}` : 'Sem prazo definido',
+    progresso: valorAtual,
+    total:     valorAlvo,
+    unidade:   '',
+    circular:  m.tipo === 'frequencia_semanal',
+    labelEsquerda: `${valorAtual} atual`,
+    labelDireita:  String(valorAlvo),
+    subInfo: `Faltam ${Math.max(0, valorAlvo - valorAtual)} para atingir a meta`,
+    rodape: { esquerda: m.dataCriacao ? `Iniciada em ${m.dataCriacao.substring(0, 10)}` : '', direita: `${Math.round(pct)}% concluído`, direitaCor: pct >= 80 ? 'text-green-400' : 'text-primary' },
+    status: m.status,
+  }
+}
 
-  function handleCriarMeta({ tipo, titulo, alvo, prazo }) {
-    const nova = {
-      id: Date.now(),
-      destaque: false,
-      titulo,
-      tipo: TIPOS_META.find(t => t.id === tipo)?.label ?? tipo,
-      badge: 'EM ANDAMENTO',
-      prazo: prazo ? `Vence em ${prazo}` : 'Sem prazo definido',
-      progresso: 0,
-      total: parseInt(alvo) || 100,
-      unidade: '',
-      circular: false,
-      labelEsquerda: '0 atual',
-      labelDireita: alvo || '100',
-      subInfo: `Meta: ${alvo || '100'}`,
-      rodape: { esquerda: `Iniciada hoje`, direita: 'Recém criada', direitaCor: 'text-gray-500' },
-    }
-    setMetasAtivas(prev => [...prev, nova])
+function Metas() {
+  const [metasAtivas, setMetasAtivas]       = useState([])
+  const [metasConcluidas, setMetasConcluidas] = useState([])
+  const [carregando, setCarregando]         = useState(true)
+  const [modalAberto, setModalAberto]       = useState(false)
+
+  useEffect(() => {
+    getMetas()
+      .then(data => {
+        const todas = data ?? []
+        const ativas    = todas.filter(m => m.status !== 'CONCLUIDA').map(adaptarMeta)
+        const concluidas = todas.filter(m => m.status === 'CONCLUIDA').map((m, i) => ({
+          id:    m.id,
+          titulo: m.titulo,
+          tipo:   TIPOS_META.find(t => t.id === m.tipo)?.label ?? m.tipo,
+          rodape: `Concluída em ${m.dataConclusao?.substring(0, 10) ?? '—'}`,
+        }))
+        setMetasAtivas(ativas)
+        setMetasConcluidas(concluidas)
+      })
+      .catch(() => {})
+      .finally(() => setCarregando(false))
+  }, [])
+
+  async function handleCriarMeta({ tipo, titulo, alvo, prazo }) {
+    try {
+      const nova = await createMeta({
+        titulo,
+        tipo,
+        valorAlvo: parseFloat(alvo) || 100,
+        dataLimite: prazo || null,
+      })
+      setMetasAtivas(prev => [...prev, adaptarMeta(nova, 0)])
+    } catch { /* silencioso */ }
     setModalAberto(false)
   }
 
-  function handleExcluir(id) {
-    setMetasAtivas(prev => prev.filter(m => m.id !== id))
+  async function handleExcluir(id) {
+    try {
+      await deleteMeta(id)
+      setMetasAtivas(prev => prev.filter(m => m.id !== id))
+    } catch { /* silencioso */ }
   }
 
   return (
-    <AppLayout usuario={USUARIO}>
+    <AppLayout>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7">
         <div>
           <h1 className="text-white font-extrabold text-2xl sm:text-3xl">Minhas Metas</h1>
           <p className="text-gray-400 text-sm mt-1">
-            {metasAtivas.length} metas ativas · 2 concluídas este mês
+            {metasAtivas.length} metas ativas · {metasConcluidas.length} concluídas
           </p>
         </div>
         <button
@@ -391,7 +423,9 @@ function Metas() {
           <p className="text-gray-500 text-sm mt-0.5">Acompanhe seu progresso em tempo real</p>
         </div>
 
-        {metasAtivas.length === 0 ? (
+        {carregando ? (
+          <p className="text-gray-500 text-sm text-center py-8">Carregando metas...</p>
+        ) : metasAtivas.length === 0 ? (
           <div className="bg-[#161616] border border-gray-800/60 rounded-2xl p-10 text-center">
             <Target size={32} className="text-gray-700 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">Nenhuma meta ativa</p>
@@ -419,7 +453,9 @@ function Metas() {
           <p className="text-gray-500 text-sm mt-0.5">Metas que você já bateu</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {METAS_CONCLUIDAS.map(meta => (
+          {metasConcluidas.length === 0 ? (
+            <p className="text-gray-600 text-sm col-span-2">Nenhuma meta concluída ainda.</p>
+          ) : metasConcluidas.map(meta => (
             <CardMetaConcluida key={meta.id} meta={meta} />
           ))}
         </div>

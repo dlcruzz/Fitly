@@ -1,33 +1,25 @@
 import api from './api'
 
-// Busca todos os treinos do usuário autenticado
 export async function getTreinos() {
-  // TODO: implementar GET /treinos
-  // TODO: retornar lista de treinos
+  const { data } = await api.get('/treinos')
+  return data
 }
 
-// Busca um treino específico pelo ID
 export async function getTreinoById(id) {
-  // TODO: implementar GET /treinos/:id
-  // TODO: retornar treino com exercícios associados
+  const { data } = await api.get(`/treinos/${id}`)
+  return data
 }
 
-// Cria um novo treino
 export async function createTreino(dadosTreino) {
-  // TODO: implementar POST /treinos
-  // TODO: enviar nome, descricao, diasSemana, exercicios
-  // TODO: retornar treino criado com ID
+  const { data } = await api.post('/treinos', dadosTreino)
+  return data
 }
 
-// Atualiza um treino existente
 export async function updateTreino(id, dadosTreino) {
-  // TODO: implementar PUT /treinos/:id
-  // TODO: atualizar campos alterados
-  // TODO: retornar treino atualizado
+  const { data } = await api.put(`/treinos/${id}`, dadosTreino)
+  return data
 }
 
-// Remove um treino pelo ID
 export async function deleteTreino(id) {
-  // TODO: implementar DELETE /treinos/:id
-  // TODO: confirmar exclusão antes de chamar a API
+  await api.delete(`/treinos/${id}`)
 }

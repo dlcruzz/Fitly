@@ -12,6 +12,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', Icone: LayoutDashboard },
@@ -22,8 +23,12 @@ const NAV_ITEMS = [
   { to: '/perfil', label: 'Perfil', Icone: User },
 ]
 
-function AppLayout({ children, usuario = {} }) {
-  const { nome = 'Usuário', objetivo = '', nivel = '', streak = 0 } = usuario
+function AppLayout({ children }) {
+  const { usuario } = useAuth()
+  const nome    = usuario?.nome  ?? 'Usuário'
+  const objetivo = ''
+  const nivel    = ''
+  const streak   = 0
   const [sidebarAberta, setSidebarAberta] = useState(false)
 
   const iniciais = nome
