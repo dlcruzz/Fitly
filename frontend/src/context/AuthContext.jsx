@@ -20,14 +20,14 @@ export function AuthProvider({ children }) {
 
   async function login(email, senha) {
     const data = await serviceLogin(email, senha)
-    setUsuario(data.usuario ?? null)
+    setUsuario(obterUsuario())
     setAutenticado(true)
     return data
   }
 
   async function register(dadosUsuario) {
     const data = await serviceRegister(dadosUsuario)
-    setUsuario(data.usuario ?? null)
+    setUsuario(obterUsuario())
     setAutenticado(true)
     return data
   }

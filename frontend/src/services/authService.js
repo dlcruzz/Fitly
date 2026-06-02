@@ -3,21 +3,24 @@ import api from './api'
 const TOKEN_KEY = 'fitly_token'
 const USUARIO_KEY = 'fitly_usuario'
 
+function salvarSessao(data) {
+  localStorage.setItem(TOKEN_KEY, data.token)
+  localStorage.setItem(USUARIO_KEY, JSON.stringify({
+    id:    data.idUsuario,
+    nome:  data.nome,
+    email: data.email,
+  }))
+}
+
 export async function login(email, senha) {
   const { data } = await api.post('/auth/login', { email, senha })
-  localStorage.setItem(TOKEN_KEY, data.token)
-  if (data.usuario) {
-    localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
-  }
+  salvarSessao(data)
   return data
 }
 
 export async function register(dadosUsuario) {
   const { data } = await api.post('/auth/register', dadosUsuario)
-  localStorage.setItem(TOKEN_KEY, data.token)
-  if (data.usuario) {
-    localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
-  }
+  salvarSessao(data)
   return data
 }
 
